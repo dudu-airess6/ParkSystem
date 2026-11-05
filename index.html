@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ParkSystem</title>
+<style>
+:root{
+  --asfalto:#1d252b; --asfalto2:#2b363e; --faixa:#f2b705; --papel:#f4f5f2; --card:#fff;
+  --tinta:#1b2227; --muda:#66717a; --linha:#dfe3e0;
+  --livre:#2f9e5f; --ocup:#d4473f; --reserv:#3b6fb6; --bloq:#8b949b;
+  --erro:#b3261e; --ok:#1f7a45;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font:15px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif;color:var(--tinta);background:var(--papel)}
+[hidden]{display:none!important}
+h1{font-size:1.6rem;margin:0 0 1rem;letter-spacing:-.01em}
+h2{font-size:1.1rem;margin:1.4rem 0 .6rem}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--faixa);outline-offset:2px}
+
+/* botões e campos */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;min-height:40px;padding:0 1.1rem;border:1px solid var(--asfalto);background:var(--asfalto);color:#fff;border-radius:6px;cursor:pointer;font-weight:600}
+.btn:hover{background:var(--asfalto2)}
+.btn.sec{background:transparent;color:var(--tinta);border-color:#b9c0bb}
+.btn.sec:hover{background:#e9ece8}
+.btn.main{background:var(--faixa);border-color:var(--faixa);color:#1b1500}
+.btn.main:hover{background:#ffc619}
+.btn.sm{min-height:32px;padding:0 .7rem;font-size:.85rem}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+label{display:block;font-weight:600;font-size:.88rem;margin:0 0 .25rem}
+input,select,textarea{width:100%;min-height:40px;padding:.45rem .65rem;border:1px solid #b9c0bb;border-radius:6px;background:#fff}
+textarea{min-height:90px;resize:vertical}
+input.bad{border-color:var(--erro);background:#fdf1f0}
+.row{display:grid;gap:.9rem;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));align-items:end}
+.card{background:var(--card);border:1px solid var(--linha);border-radius:8px;padding:1.1rem;margin-bottom:1rem}
+.muted{color:var(--muda);font-size:.88rem}
+.alert{padding:.65rem .85rem;border-radius:6px;margin:.8rem 0;font-weight:500}
+.alert.err{background:#fdecea;color:var(--erro);border:1px solid #f3c4bf}
+.alert.ok{background:#e6f4ea;color:var(--ok);border:1px solid #bfe0c9}
+.alert.warn{background:#fff6dd;color:#6b5200;border:1px solid #f0dc9b}
+.actions{display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem}
+
+/* login */
+#login{min-height:100%;display:grid;place-items:center;background:var(--asfalto);padding:1rem}
+#login form{background:#fff;border-radius:10px;padding:2rem;width:100%;max-width:380px;border-top:6px solid var(--faixa)}
+.brand{display:flex;align-items:center;gap:.7rem;font-weight:800;font-size:1.35rem;letter-spacing:-.01em}
+.mark{width:38px;height:38px;border-radius:7px;background:var(--faixa);color:var(--asfalto);display:grid;place-items:center;font-weight:900;font-size:1.4rem}
+
+/* estrutura do app */
+#app{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+aside{background:var(--asfalto);color:#e8ecee;padding:1.2rem .9rem;display:flex;flex-direction:column;gap:1.2rem}
+aside .brand{color:#fff;padding:0 .3rem}
+nav{display:flex;flex-direction:column;gap:.2rem}
+nav button{background:none;border:0;color:#c9d1d5;text-align:left;padding:.65rem .8rem;border-radius:6px;cursor:pointer;border-left:4px solid transparent;font-weight:500}
+nav button:hover{background:var(--asfalto2);color:#fff}
+nav button.on{background:var(--asfalto2);color:#fff;border-left-color:var(--faixa);font-weight:700}
+.user{margin-top:auto;font-size:.85rem;color:#aab4ba;padding:0 .3rem}
+.user b{color:#fff;display:block}
+.user button{margin-top:.5rem}
+main{padding:1.6rem 2rem;max-width:1100px;width:100%}
+
+/* mapa de vagas */
+.chips{display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem}
+.chip{display:flex;align-items:center;gap:.45rem;background:#fff;border:1px solid var(--linha);border-radius:99px;padding:.3rem .8rem;font-weight:600;font-size:.88rem}
+.dot{width:12px;height:12px;border-radius:3px;display:inline-block}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:0;background:#2b333a;padding:14px 10px;border-radius:8px}
+.bay{position:relative;height:96px;border:0;border-left:3px solid var(--faixa);border-right:3px solid var(--faixa);margin-left:-3px;background:#38434b;color:#fff;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.15rem;font-weight:700}
+.bay small{font-weight:500;font-size:.75rem;opacity:.9}
+.bay .cod{font-size:1.05rem}
+.bay.livre{background:#2c5a45}
+.bay.ocupada{background:#7b2f2b}
+.bay.reservada{background:#2f4f7c}
+.bay.bloqueada{background:repeating-linear-gradient(135deg,#4a525a 0 8px,#3c444b 8px 16px);color:#c9cfd3;cursor:default}
+.bay.sel{outline:3px solid #fff;outline-offset:-6px}
+.bay:hover:not(.bloqueada){filter:brightness(1.18)}
+.tipo-t{font-weight:700;margin:1.1rem 0 .4rem}
+
+/* ticket / comprovante */
+.ticket{border:2px dashed #aab1ab;border-radius:8px;padding:1.2rem;max-width:380px;background:#fff;margin-top:1rem}
+.ticket .code{font-size:2rem;font-weight:800;letter-spacing:.06em;text-align:center;padding:.3rem 0}
+.ticket dl{display:grid;grid-template-columns:auto 1fr;gap:.25rem .9rem;margin:.6rem 0 0}
+.ticket dt{color:var(--muda)} .ticket dd{margin:0;font-weight:600;text-align:right}
+.valor{font-size:2.2rem;font-weight:800;letter-spacing:-.02em}
+.seg{display:flex;gap:.5rem}
+.seg label{flex:1;margin:0;border:1px solid #b9c0bb;border-radius:6px;padding:.55rem;text-align:center;cursor:pointer;background:#fff;font-weight:600}
+.seg input{position:absolute;opacity:0;width:0;min-height:0}
+.seg input:checked+span{display:block}
+.seg label:has(input:checked){background:var(--asfalto);color:#fff;border-color:var(--asfalto)}
+.seg label:has(input:focus-visible){outline:3px solid var(--faixa);outline-offset:2px}
+.pill{display:inline-block;padding:.12rem .6rem;border-radius:99px;font-size:.78rem;font-weight:700}
+.pill.ok{background:#e1f3e8;color:var(--ok)} .pill.off{background:#e8eaec;color:#555} .pill.venc{background:#fff0cf;color:#7a5700} .pill.pat{background:#fbe3e1;color:var(--erro)}
+.picks{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem}
+
+/* tabelas */
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;background:#fff}
+th,td{text-align:left;padding:.55rem .7rem;border-bottom:1px solid var(--linha);vertical-align:top}
+th{background:#eceee9;font-size:.85rem}
+td.n,th.n{text-align:right;white-space:nowrap}
+tfoot td{font-weight:800;background:#f6f7f4}
+.sub{color:var(--muda);font-size:.82rem}
+
+#toast{position:fixed;right:1rem;bottom:1rem;background:var(--asfalto);color:#fff;padding:.7rem 1rem;border-radius:6px;border-left:5px solid var(--faixa);box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:9}
+
+@media (max-width:760px){
+  #app{grid-template-columns:1fr}
+  aside{flex-direction:row;flex-wrap:wrap;align-items:center;padding:.7rem}
+  nav{flex-direction:row;overflow-x:auto;width:100%;order:3}
+  nav button{white-space:nowrap;border-left:0;border-bottom:3px solid transparent}
+  nav button.on{border-bottom-color:var(--faixa)}
+  .user{margin:0 0 0 auto;display:flex;gap:.6rem;align-items:center}
+  .user button{margin:0}
+  main{padding:1rem}
+}
+@media print{
+  body *{visibility:hidden}
+  .printable,.printable *{visibility:visible}
+  .printable{position:absolute;left:0;top:0;width:100%;border:0}
+  .noprint{display:none!important}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<section id="login">
+  <form id="f-login" autocomplete="on">
+    <div class="brand"><span class="mark">P</span>ParkSystem</div>
+    <p class="muted" style="margin:.6rem 0 1.2rem">Entre com seu usuário para acessar o sistema.</p>
+    <label for="lg">Usuário</label><input id="lg" autocomplete="username" required autofocus>
+    <div style="height:.8rem"></div>
+    <label for="sn">Senha</label><input id="sn" type="password" autocomplete="current-password" required>
+    <div id="lg-err" class="alert err" hidden></div>
+    <button class="btn main" style="width:100%;margin-top:1rem">Entrar</button>
+    <p class="muted" style="margin:1rem 0 0">Demonstração: <b>operador</b> / operador123 &nbsp;·&nbsp; <b>gerente</b> / gerente123</p>
+  </form>
+</section>
+
+<div id="app" hidden>
+  <aside class="noprint">
+    <div class="brand"><span class="mark">P</span>ParkSystem</div>
+    <nav id="nav"></nav>
+    <div class="user"><b id="u-nome"></b><span id="u-perfil"></span><br><button class="btn sec sm" id="sair" style="color:#e8ecee;border-color:#52606a">Sair</button></div>
+  </aside>
+  <main id="view"></main>
+</div>
+<div id="toast" hidden></div>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const brl=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const fdt=s=>s?new Date(s).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
+const fd=s=>s?s.split('-').reverse().join('/'):'—';
+const dur=m=>{m=Math.round(m);const h=Math.floor(m/60);return h?`${h}h ${String(m%60).padStart(2,'0')}min`:`${m} min`};
+const isoD=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const cpfF=c=>c.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/,'$1.$2.$3-$4');
+const qs=o=>new URLSearchParams(Object.fromEntries(Object.entries(o).filter(([,v])=>v))).toString();
+
+let ME=null, timer=null, toastT=null;
+
+async function api(path,opt={}){
+  const r=await fetch(path,{method:opt.method||'GET',headers:{'Content-Type':'application/json'},body:opt.body?JSON.stringify(opt.body):undefined});
+  let d={}; try{d=await r.json()}catch(e){}
+  if(r.status===401&&path!=='/api/login'){showLogin();throw Object.assign(new Error('Sessão expirada'),{data:d,status:401})}
+  if(!r.ok)throw Object.assign(new Error(d.erro||'Erro inesperado'),{data:d,status:r.status});
+  return d;
+}
+function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,3200)}
+function msg(el,texto,tipo='err'){el.className='alert '+tipo;el.textContent=texto;el.hidden=!texto}
+
+/* ---------- login / sessão ---------- */
+function showLogin(){clearInterval(timer);ME=null;$('#app').hidden=true;$('#login').hidden=false;$('#sn').value=''}
+$('#f-login').addEventListener('submit',async e=>{
+  e.preventDefault();
+  try{ME=await api('/api/login',{method:'POST',body:{login:$('#lg').value,senha:$('#sn').value}});showApp()}
+  catch(err){msg($('#lg-err'),err.message)}
+});
+$('#sair').onclick=async()=>{try{await api('/api/logout',{method:'POST'})}catch(e){}showLogin()};
+
+const MENUS={
+ 'Operador de Pátio':[['mapa','Mapa de vagas',vMapa],['entrada','Registrar entrada',vEntrada],['saida','Registrar saída',vSaida],['oc','Avarias e ocorrências',vOcorrencias]],
+ 'ADM / Gerente':[['rel','Relatórios',vRelatorios],['hist','Histórico',vHistorico],['mens','Mensalistas',vMensalistas],['tar','Tarifas',vTarifas]]
+};
+function showApp(){
+  $('#login').hidden=true;$('#app').hidden=false;
+  $('#u-nome').textContent=ME.nome;$('#u-perfil').textContent=ME.perfil;
+  $('#nav').innerHTML=MENUS[ME.perfil].map(([id,t])=>`<button data-id="${id}">${t}</button>`).join('');
+  $('#nav').onclick=e=>{const b=e.target.closest('button');if(b)go(b.dataset.id)};
+  go(MENUS[ME.perfil][0][0]);
+}
+function go(id,arg){
+  clearInterval(timer);
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.id===id));
+  MENUS[ME.perfil].find(m=>m[0]===id)[2](arg);
+  window.scrollTo(0,0);
+}
+const V=h=>{$('#view').innerHTML=h;return $('#view')};
+
+/* ---------- UC04 Mapa de vagas ---------- */
+let selVaga=null;
+async function vMapa(){
+  V(`<h1>Mapa de vagas</h1><div id="resumo" class="chips"></div><div id="mapa"></div><div id="det" class="card" style="margin-top:1rem" hidden></div>
+     <p class="muted">Clique em uma vaga para ver detalhes. O mapa atualiza sozinho a cada 15 segundos.</p>`);
+  let dados;
+  const draw=async()=>{
+    try{dados=await api('/api/mapa')}catch(e){return}
+    const r=dados.resumo,cor={livre:'--livre',ocupada:'--ocup',reservada:'--reserv',bloqueada:'--bloq'};
+    $('#resumo').innerHTML=['livre','ocupada','reservada','bloqueada'].map(s=>`<span class="chip"><span class="dot" style="background:var(${cor[s]})"></span>${r[s]} ${s==='livre'?'livres':s==='ocupada'?'ocupadas':s==='reservada'?'reservadas (mensalistas)':'bloqueadas'}</span>`).join('');
+    $('#mapa').innerHTML=['Carro','Moto'].map(t=>`<div class="tipo-t">${t==='Carro'?'Carros':'Motos'}</div><div class="grid">`+
+      dados.vagas.filter(v=>v.tipo===t).map(v=>`<button class="bay ${v.status}${v.id===selVaga?' sel':''}" data-id="${v.id}" ${v.status==='bloqueada'?'disabled':''} aria-label="Vaga ${v.codigo}, ${v.status}">
+        <span class="cod">${v.codigo}</span><small>${v.status==='ocupada'?esc(v.placa):v.status==='reservada'?'Mensalista':v.status==='bloqueada'?'Bloqueada':'Livre'}</small></button>`).join('')+`</div>`).join('');
+    if(selVaga)detalhe(selVaga);
+  };
+  const detalhe=id=>{
+    const v=dados.vagas.find(x=>x.id===id);const d=$('#det');if(!v){d.hidden=true;return}
+    d.hidden=false;
+    if(v.status==='ocupada')d.innerHTML=`<b>Vaga ${v.codigo}</b> ocupada pelo veículo <b>${esc(v.placa)}</b><br><span class="muted">Entrada: ${fdt(v.entrada)} · Ticket ${v.ticket}</span><div class="actions"><button class="btn" id="d-saida">Registrar saída</button></div>`;
+    else d.innerHTML=`<b>Vaga ${v.codigo}</b> ${v.status==='reservada'?'reservada para mensalistas':'livre'}<div class="actions"><button class="btn main" id="d-ent">Registrar entrada nesta vaga</button></div>`;
+    const bs=$('#d-saida'),be=$('#d-ent');
+    if(bs)bs.onclick=()=>go('saida',{q:v.ticket});
+    if(be)be.onclick=()=>go('entrada',{vaga:v.id,tipo:v.tipo});
+  };
+  $('#mapa').onclick=e=>{const b=e.target.closest('.bay');if(!b)return;selVaga=+b.dataset.id;draw()};
+  await draw();timer=setInterval(draw,15000);
+}
+
+/* ---------- UC02 Registrar entrada ---------- */
+async function vEntrada(arg={}){
+  V(`<h1>Registrar entrada</h1>
+   <form class="card" id="f-ent" style="max-width:560px">
+     <label for="placa">Placa do veículo</label>
+     <input id="placa" maxlength="8" placeholder="ABC1D23" autocomplete="off" style="text-transform:uppercase;font-size:1.3rem;font-weight:700;letter-spacing:.08em" required>
+     <div style="height:.9rem"></div>
+     <label>Tipo de veículo</label>
+     <div class="seg"><label><input type="radio" name="tipo" value="Carro" checked>Carro</label><label><input type="radio" name="tipo" value="Moto">Moto</label></div>
+     <div style="height:.9rem"></div>
+     <label for="vaga">Vaga</label><select id="vaga"></select>
+     <div id="e-msg" class="alert" hidden></div>
+     <div class="actions"><button class="btn main">Registrar entrada</button></div>
+   </form><div id="e-ticket"></div>`);
+  let mp;
+  const tipo=()=>document.querySelector('input[name=tipo]:checked').value;
+  const carregaVagas=async(pref)=>{
+    mp=await api('/api/mapa');
+    const livres=mp.vagas.filter(v=>v.tipo===tipo()&&(v.status==='livre'||v.status==='reservada'));
+    $('#vaga').innerHTML='<option value="">Automática (primeira vaga livre)</option>'+livres.map(v=>`<option value="${v.id}">${v.codigo}${v.status==='reservada'?' (mensalista)':''}</option>`).join('');
+    if(pref)$('#vaga').value=pref;
+  };
+  if(arg.tipo)document.querySelector(`input[name=tipo][value=${arg.tipo}]`).checked=true;
+  await carregaVagas(arg.vaga);
+  document.querySelectorAll('input[name=tipo]').forEach(r=>r.onchange=()=>carregaVagas());
+  $('#placa').oninput=e=>e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g,'');
+  $('#placa').focus();
+  $('#f-ent').onsubmit=async e=>{
+    e.preventDefault();msg($('#e-msg'),'');
+    try{
+      const t=await api('/api/entrada',{method:'POST',body:{placa:$('#placa').value,tipo:tipo(),vaga_id:$('#vaga').value||null}});
+      $('#e-ticket').innerHTML=`<div class="ticket printable"><div class="brand" style="justify-content:center"><span class="mark">P</span>ParkSystem</div>
+        <div class="code">${t.ticket}</div><dl><dt>Placa</dt><dd>${esc(t.placa)}</dd><dt>Veículo</dt><dd>${t.tipo}</dd><dt>Vaga</dt><dd>${t.vaga}</dd><dt>Entrada</dt><dd>${fdt(t.entrada)}</dd>${t.mensalista?`<dt>Mensalista</dt><dd>${esc(t.mensalista)}</dd>`:''}</dl></div>
+        <div class="actions noprint"><button class="btn" id="imp">Imprimir ticket</button><button class="btn sec" id="novo">Nova entrada</button></div>`;
+      $('#imp').onclick=()=>window.print();$('#novo').onclick=()=>go('entrada');
+      toast('Entrada registrada: vaga '+t.vaga);
+      $('#placa').value='';carregaVagas();
+    }catch(err){msg($('#e-msg'),err.message,err.status===409?'warn':'err')}
+  };
+}
+
+/* ---------- UC03 Registrar saída (UC11 + UC10) ---------- */
+async function vSaida(arg={}){
+  V(`<h1>Registrar saída</h1>
+   <form class="card" id="f-bus" style="max-width:560px"><label for="q">Código do ticket ou placa</label>
+     <div style="display:flex;gap:.6rem"><input id="q" placeholder="PK-3F9A1C ou ABC1D23" autocomplete="off" style="text-transform:uppercase" required><button class="btn">Buscar</button></div>
+     <div id="s-msg" class="alert" hidden></div>
+     <div class="muted" style="margin-top:.8rem">No pátio agora:</div><div id="patio" class="picks"></div></form>
+   <div id="s-res"></div>`);
+  const pt=await api('/api/patio');
+  $('#patio').innerHTML=pt.length?pt.map(e=>`<button type="button" class="btn sec sm" data-t="${e.ticket}">${esc(e.placa)} · ${e.vaga}</button>`).join(''):'<span class="muted">Nenhum veículo no pátio.</span>';
+  $('#patio').onclick=e=>{const b=e.target.closest('button');if(b){$('#q').value=b.dataset.t;busca()}};
+  const busca=async()=>{
+    msg($('#s-msg'),'');$('#s-res').innerHTML='';
+    try{mostra(await api('/api/saida/buscar?q='+encodeURIComponent($('#q').value)))}
+    catch(err){msg($('#s-msg'),err.message)}
+  };
+  const mostra=e=>{
+    const gratis=e.valor===0;
+    $('#s-res').innerHTML=`<div class="card" style="max-width:560px"><div class="muted">${esc(e.placa)} · ${e.tipo} · vaga ${e.vaga} · ticket ${e.ticket}</div>
+      <div class="muted">Entrada ${fdt(e.entrada)} · permanência ${dur(e.minutos)}</div>
+      <div class="valor" style="margin:.5rem 0 .2rem">${brl(e.valor)}</div><div class="muted">${esc(e.detalhe)}</div>
+      ${gratis?'':`<div style="height:.9rem"></div><label>Forma de pagamento</label><div class="seg"><label><input type="radio" name="forma" value="Dinheiro" checked>Dinheiro</label><label><input type="radio" name="forma" value="Cartão">Cartão</label><label><input type="radio" name="forma" value="PIX">PIX</label></div>
+      <label style="margin-top:.9rem;font-weight:400"><input type="checkbox" id="recusa" style="width:auto;min-height:0"> <span class="muted">Simular recusa do gateway (demonstração)</span></label>`}
+      <div id="p-msg" class="alert" hidden></div>
+      <div class="actions"><button class="btn main" id="conf">${gratis?'Liberar saída':'Confirmar pagamento e saída'}</button></div></div>`;
+    $('#conf').onclick=async()=>{
+      const f=document.querySelector('input[name=forma]:checked');
+      $('#conf').disabled=true;
+      try{
+        const r=await api('/api/saida',{method:'POST',body:{estadia_id:e.id,forma:f&&f.value,simular_recusa:$('#recusa')&&$('#recusa').checked}});
+        $('#s-res').innerHTML=`<div class="ticket printable"><div class="brand" style="justify-content:center"><span class="mark">P</span>ParkSystem</div><div class="muted" style="text-align:center">Comprovante de saída</div>
+          <dl><dt>Placa</dt><dd>${esc(r.placa)}</dd><dt>Vaga</dt><dd>${r.vaga}</dd><dt>Entrada</dt><dd>${fdt(r.entrada)}</dd><dt>Saída</dt><dd>${fdt(r.saida)}</dd><dt>Permanência</dt><dd>${dur(r.minutos)}</dd><dt>Pagamento</dt><dd>${esc(r.forma)}</dd><dt>Autorização</dt><dd>${r.autorizacao}</dd><dt>Total</dt><dd style="font-size:1.3rem">${brl(r.valor)}</dd></dl></div>
+          <div class="actions noprint"><button class="btn" id="imp">Imprimir comprovante</button><button class="btn sec" id="novo">Nova saída</button></div>`;
+        $('#imp').onclick=()=>window.print();$('#novo').onclick=()=>go('saida');
+        toast('Saída registrada. Vaga '+r.vaga+' liberada.');
+      }catch(err){$('#conf').disabled=false;msg($('#p-msg'),err.message)}
+    };
+  };
+  $('#f-bus').onsubmit=e=>{e.preventDefault();busca()};
+  if(arg.q){$('#q').value=arg.q;busca()}else $('#q').focus();
+}
+
+/* ---------- UC05 Avaria / ocorrência ---------- */
+async function vOcorrencias(){
+  V(`<h1>Avarias e ocorrências</h1>
+   <form class="card" id="f-oc" style="max-width:560px">
+     <label for="oplaca">Placa do veículo <span class="muted">(deixe em branco para ocorrência geral do pátio)</span></label>
+     <input id="oplaca" maxlength="8" autocomplete="off" style="text-transform:uppercase" placeholder="ABC1D23">
+     <div style="height:.9rem"></div>
+     <label for="otipo">Tipo</label>
+     <select id="otipo"><option>Risco na pintura</option><option>Amassado</option><option>Objeto esquecido</option><option>Outro</option></select>
+     <div style="height:.9rem"></div>
+     <label for="odesc">Descrição</label><textarea id="odesc" required></textarea>
+     <div id="o-msg" class="alert" hidden></div>
+     <div class="actions"><button class="btn main">Salvar ocorrência</button></div></form>
+   <h2>Últimos registros</h2><div class="tw"><table><thead><tr><th>Data</th><th>Tipo</th><th>Veículo</th><th>Descrição</th></tr></thead><tbody id="o-lista"></tbody></table></div>`);
+  const lista=async()=>{
+    const l=await api('/api/ocorrencias');
+    $('#o-lista').innerHTML=l.length?l.map(o=>`<tr><td>${fdt(o.data)}</td><td>${esc(o.tipo)}</td><td>${o.placa?esc(o.placa):'<span class="muted">Pátio (geral)</span>'}</td><td>${esc(o.descricao)}</td></tr>`).join(''):'<tr><td colspan="4" class="muted">Nenhuma ocorrência registrada.</td></tr>';
+  };
+  const salvar=async conf=>{
+    try{
+      const r=await api('/api/ocorrencias',{method:'POST',body:{placa:$('#oplaca').value,tipo:$('#otipo').value,descricao:$('#odesc').value,confirmar_geral:conf}});
+      msg($('#o-msg'),r.geral?'Ocorrência geral do pátio registrada.':'Ocorrência vinculada à estadia do veículo.','ok');
+      $('#odesc').value='';$('#oplaca').value='';lista();
+    }catch(err){
+      if(err.data&&err.data.nao_encontrado&&confirm(err.message))return salvar(true);
+      msg($('#o-msg'),err.message,'warn');
+    }
+  };
+  $('#f-oc').onsubmit=e=>{e.preventDefault();salvar(false)};
+  lista();
+}
+
+/* ---------- UC06 Mensalistas ---------- */
+async function vMensalistas(){
+  let lista=[],edit=null;
+  V(`<h1>Mensalistas</h1>
+   <div class="actions" style="margin:0 0 1rem"><input id="busca" placeholder="Buscar por nome, CPF ou placa" style="max-width:320px"><button class="btn main" id="novo">Novo mensalista</button></div>
+   <form class="card" id="f-m" hidden>
+     <h2 id="m-tit" style="margin-top:0">Novo mensalista</h2>
+     <div class="row">
+       <div><label for="mn">Nome</label><input id="mn" required></div>
+       <div><label for="mc">CPF</label><input id="mc" inputmode="numeric" maxlength="14" required></div>
+       <div><label for="mt">Telefone</label><input id="mt" inputmode="tel"></div>
+       <div><label for="mp">Placas <span class="muted">(separe por vírgula)</span></label><input id="mp" style="text-transform:uppercase" required></div>
+       <div><label for="mpl">Plano</label><select id="mpl"><option>Mensal</option><option>Trimestral</option><option>Anual</option></select></div>
+       <div><label for="mv">Vencimento</label><input id="mv" type="date" required></div>
+     </div>
+     <div id="m-msg" class="alert" hidden></div>
+     <div class="actions"><button class="btn main">Salvar</button><button type="button" class="btn sec" id="cancel">Cancelar</button></div></form>
+   <div class="tw"><table><thead><tr><th>Nome</th><th>CPF</th><th>Placas</th><th>Plano</th><th>Vencimento</th><th>Situação</th><th></th></tr></thead><tbody id="m-lista"></tbody></table></div>`);
+  const hoje=isoD(new Date());
+  const desenha=()=>{
+    const t=$('#busca').value.toLowerCase().replace(/[-.]/g,'');
+    const l=lista.filter(m=>(m.nome+m.cpf+m.placas).toLowerCase().includes(t));
+    $('#m-lista').innerHTML=l.length?l.map(m=>{
+      const st=!m.ativo?'<span class="pill off">Inativo</span>':m.vencimento<hoje?'<span class="pill venc">Vencido</span>':'<span class="pill ok">Ativo</span>';
+      return `<tr><td>${esc(m.nome)}<div class="sub">${esc(m.telefone)}</div></td><td>${cpfF(m.cpf)}</td><td>${esc(m.placas.split(',').join(', '))}</td><td>${m.plano}</td><td>${fd(m.vencimento)}</td><td>${st}</td>
+        <td class="n"><button class="btn sec sm" data-e="${m.id}">Editar</button> <button class="btn sec sm" data-s="${m.id}">${m.ativo?'Inativar':'Reativar'}</button></td></tr>`}).join(''):'<tr><td colspan="7" class="muted">Nenhum mensalista encontrado.</td></tr>';
+  };
+  const carrega=async()=>{lista=await api('/api/mensalistas');desenha()};
+  const abre=m=>{
+    edit=m?m.id:null;$('#f-m').hidden=false;msg($('#m-msg'),'');
+    $('#m-tit').textContent=m?'Editar mensalista':'Novo mensalista';
+    $('#mn').value=m?m.nome:'';$('#mc').value=m?cpfF(m.cpf):'';$('#mt').value=m?m.telefone:'';
+    $('#mp').value=m?m.placas.split(',').join(', '):'';$('#mpl').value=m?m.plano:'Mensal';$('#mv').value=m?m.vencimento:'';
+    $('#mn').focus();$('#f-m').scrollIntoView({block:'nearest'});
+  };
+  $('#novo').onclick=()=>abre(null);
+  $('#cancel').onclick=()=>$('#f-m').hidden=true;
+  $('#busca').oninput=desenha;
+  $('#m-lista').onclick=async e=>{
+    const b=e.target.closest('button');if(!b)return;
+    if(b.dataset.e)abre(lista.find(m=>m.id==b.dataset.e));
+    if(b.dataset.s){const m=lista.find(x=>x.id==b.dataset.s);
+      await api(`/api/mensalistas/${m.id}/status`,{method:'POST',body:{ativo:!m.ativo}});toast(m.ativo?'Mensalista inativado.':'Mensalista reativado.');carrega()}
+  };
+  $('#f-m').onsubmit=async e=>{
+    e.preventDefault();
+    const body={nome:$('#mn').value,cpf:$('#mc').value,telefone:$('#mt').value,placas:$('#mp').value,plano:$('#mpl').value,vencimento:$('#mv').value};
+    try{
+      await api(edit?`/api/mensalistas/${edit}`:'/api/mensalistas',{method:edit?'PUT':'POST',body});
+      $('#f-m').hidden=true;toast('Cadastro salvo.');carrega();
+    }catch(err){
+      if(err.data&&err.data.duplicado&&confirm(err.message+'\n\nAbrir o cadastro existente para edição?')){abre(lista.find(m=>m.id===err.data.duplicado));return}
+      msg($('#m-msg'),err.message);
+    }
+  };
+  carrega();
+}
+
+/* ---------- UC07 Tarifas ---------- */
+async function vTarifas(){
+  const t=await api('/api/tarifas');
+  const linha=tp=>`<tr><td><b>${tp}</b></td>${['valor_hora','valor_fracao','valor_diaria'].map(k=>`<td><input name="${tp}.${k}" inputmode="decimal" value="${String(t.tarifas[tp][k].toFixed(2)).replace('.',',')}"></td>`).join('')}</tr>`;
+  V(`<h1>Tarifas</h1>
+   <form class="card" id="f-t">
+     <div class="row" style="max-width:520px">
+       <div><label for="tol">Tolerância grátis (minutos)</label><input name="tolerancia_min" id="tol" inputmode="numeric" value="${t.tolerancia_min}"></div>
+       <div><label for="fr">Fração de tempo (minutos)</label><input name="fracao_min" id="fr" inputmode="numeric" value="${t.fracao_min}"></div>
+     </div>
+     <h2>Valores por categoria (R$)</h2>
+     <div class="tw"><table style="max-width:640px"><thead><tr><th>Categoria</th><th>1ª hora</th><th>Cada fração adicional</th><th>Diária (teto)</th></tr></thead><tbody>${['Carro','Moto'].map(linha).join('')}</tbody></table></div>
+     <p class="muted">Após a 1ª hora, cobra-se cada fração iniciada. O valor nunca passa da diária por período de 24h.</p>
+     <div id="t-msg" class="alert" hidden></div>
+     <div class="actions"><button class="btn main">Salvar tarifas</button></div></form>`);
+  $('#f-t').onsubmit=async e=>{
+    e.preventDefault();
+    document.querySelectorAll('#f-t input').forEach(i=>i.classList.remove('bad'));
+    const v=n=>document.querySelector(`[name="${n}"]`).value;
+    const body={tolerancia_min:v('tolerancia_min'),fracao_min:v('fracao_min'),tarifas:{}};
+    for(const tp of ['Carro','Moto'])body.tarifas[tp]={valor_hora:v(tp+'.valor_hora'),valor_fracao:v(tp+'.valor_fracao'),valor_diaria:v(tp+'.valor_diaria')};
+    try{await api('/api/tarifas',{method:'PUT',body});msg($('#t-msg'),'Tarifas atualizadas.','ok')}
+    catch(err){if(err.data&&err.data.campo){const i=document.querySelector(`[name="${err.data.campo}"]`);i&&(i.classList.add('bad'),i.focus())}msg($('#t-msg'),err.message)}
+  };
+}
+
+/* ---------- UC08 Relatórios ---------- */
+async function vRelatorios(){
+  const d=new Date();
+  V(`<h1>Relatórios financeiros</h1>
+   <form class="card noprint" id="f-r"><div class="row">
+     <div><label for="ri">Data inicial</label><input id="ri" type="date" value="${isoD(new Date(d.getFullYear(),d.getMonth(),1))}" required></div>
+     <div><label for="rf">Data final</label><input id="rf" type="date" value="${isoD(d)}" required></div>
+     <div><label for="rt">Tipo de relatório</label><select id="rt"><option value="forma">Receita por forma de pagamento</option><option value="diario">Receita por dia</option><option value="perfil">Mensalistas × avulsos</option></select></div>
+     <div><button class="btn main" style="width:100%">Gerar relatório</button></div></div>
+     <div id="r-msg" class="alert" hidden></div></form>
+   <div id="r-res"></div>`);
+  $('#f-r').onsubmit=async e=>{
+    e.preventDefault();msg($('#r-msg'),'');$('#r-res').innerHTML='';
+    const p={ini:$('#ri').value,fim:$('#rf').value,tipo:$('#rt').value};
+    try{
+      const r=await api('/api/relatorio?'+qs(p));
+      if(!r.linhas.length){msg($('#r-msg'),'Não há registros de lançamentos para os filtros informados.','warn');return}
+      $('#r-res').innerHTML=`<div class="printable"><h2 style="margin-top:0">ParkSystem · ${esc($('#rt').selectedOptions[0].text)}</h2><div class="muted" style="margin-bottom:.6rem">Período: ${fd(p.ini)} a ${fd(p.fim)}</div>
+        <div class="tw"><table><thead><tr><th>${r.colunas[0]}</th><th class="n">${r.colunas[1]}</th><th class="n">${r.colunas[2]}</th></tr></thead>
+        <tbody>${r.linhas.map(l=>`<tr><td>${esc(l[0])}</td><td class="n">${l[1]}</td><td class="n">${brl(l[2])}</td></tr>`).join('')}</tbody>
+        <tfoot><tr><td>Total</td><td class="n">${r.total_qtd}</td><td class="n">${brl(r.total_valor)}</td></tr></tfoot></table></div></div>
+        <div class="actions noprint"><button class="btn" id="imp">Imprimir / salvar PDF</button><a class="btn sec" href="/api/relatorio.csv?${qs(p)}">Baixar planilha (Excel/CSV)</a></div>`;
+      $('#imp').onclick=()=>window.print();
+    }catch(err){msg($('#r-msg'),err.message)}
+  };
+}
+
+/* ---------- UC09 Histórico ---------- */
+async function vHistorico(){
+  const ops=await api('/api/usuarios');
+  V(`<h1>Histórico</h1>
+   <form class="card" id="f-h"><div class="row">
+     <div><label for="hp">Placa</label><input id="hp" maxlength="8" style="text-transform:uppercase"></div>
+     <div><label for="hi">De</label><input id="hi" type="date"></div>
+     <div><label for="hf">Até</label><input id="hf" type="date"></div>
+     <div><label for="ho">Operador</label><select id="ho"><option value="">Todos</option>${ops.map(o=>`<option value="${o.id}">${esc(o.nome)}</option>`).join('')}</select></div>
+     <div><label for="hs">Situação</label><select id="hs"><option value="">Todas</option><option value="ativa">No pátio</option><option value="finalizada">Finalizada</option></select></div>
+     <div><button class="btn main" style="width:100%">Buscar</button></div></div></form>
+   <div id="h-res"></div>`);
+  const buscar=async()=>{
+    const l=await api('/api/historico?'+qs({placa:$('#hp').value,ini:$('#hi').value,fim:$('#hf').value,operador:$('#ho').value,status:$('#hs').value}));
+    $('#h-res').innerHTML=l.length?`<div class="tw"><table><thead><tr><th>Placa</th><th>Vaga</th><th>Entrada</th><th>Saída</th><th class="n">Tempo</th><th class="n">Valor</th><th>Operador</th></tr></thead><tbody>`+
+      l.map(e=>`<tr><td><b>${esc(e.placa)}</b><div class="sub">${e.tipo} · ${e.ticket}</div></td><td>${e.vaga}</td><td>${fdt(e.entrada)}</td><td>${e.saida?fdt(e.saida):'<span class="pill pat">No pátio</span>'}</td><td class="n">${dur(e.minutos)}</td><td class="n">${e.valor==null?'—':brl(e.valor)}<div class="sub">${esc(e.forma||'')}</div></td><td>${esc(e.operador)}${e.ocorrencias.map(o=>`<div class="sub">⚠ ${esc(o)}</div>`).join('')}</td></tr>`).join('')+`</tbody></table></div>`
+      :'<div class="alert warn">Nenhum histórico localizado para os parâmetros informados.</div>';
+  };
+  $('#f-h').onsubmit=e=>{e.preventDefault();buscar()};
+  buscar();
+}
+
+/* início: recupera sessão se já estiver logado */
+api('/api/me').then(u=>{ME=u;showApp()}).catch(()=>{});
+</script>
+</body>
+</html>
